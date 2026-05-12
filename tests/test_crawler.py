@@ -34,6 +34,28 @@ def test_fetch_page_failure(monkeypatch):
     assert html is None
 
 
+# fetch_page should ignore non-HTML content types.
+def test_fetch_page_rejects_non_html_response(monkeypatch):
+    response = MagicMock()
+    response.raise_for_status.return_value = None
+    response.headers = {"Content-Type": "application/json"}
+    response.text = '{"status": "ok"}'
+
+    monkeypatch.setattr(crawler.requests, "get", lambda url, timeout: response)
+    assert crawler.fetch_page("https://quotes.toscrape.com/") is None
+
+
+# fetch_page should return None for empty HTML pages.
+def test_fetch_page_rejects_empty_html_body(monkeypatch):
+    response = MagicMock()
+    response.raise_for_status.return_value = None
+    response.headers = {"Content-Type": "text/html"}
+    response.text = ""
+
+    monkeypatch.setattr(crawler.requests, "get", lambda url, timeout: response)
+    assert crawler.fetch_page("https://quotes.toscrape.com/") is None
+
+
 # extract_links should return only normalized internal links without duplicates.
 def test_extract_links_internal_only_and_deduplicated():
     html = """
@@ -159,3 +181,14 @@ def test_crawl_politeness_delay(monkeypatch):
 # crawl should return an empty result for malformed start URL.
 def test_crawl_invalid_start_url_returns_empty():
     assert crawler.crawl("notaurl") == []
+
+
+# normalize_url should resolve and canonicalize URLs for deduplication.
+def test_normalize_url_canonicalization_rules():
+    assert crawler.normalize_url("HTTPS://Quotes.ToScrape.com:443/page/1/?x=1#frag") == (
+        "https://quotes.toscrape.com/page/1/"
+    )
+    assert crawler.normalize_url("/page/2", base_url="https://quotes.toscrape.com/") == (
+        "https://quotes.toscrape.com/page/2/"
+    )
+    assert crawler.normalize_url("mailto:test@example.com") is None

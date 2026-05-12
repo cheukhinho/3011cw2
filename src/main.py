@@ -1,9 +1,32 @@
 from __future__ import annotations
 import json
+import logging
+import os
 from pathlib import Path
 from src import crawler, indexer, search
 
 START_URL = "https://quotes.toscrape.com/"
+LOG_FORMAT = "%(asctime)s | %(levelname)s | %(name)s | %(message)s"
+logger = logging.getLogger(__name__)
+
+
+# Configure application-wide logging with optional file output.
+def configure_logging() -> None:
+    log_level_name = os.getenv("SEARCH_ENGINE_LOG_LEVEL", "INFO").upper()
+    log_file = os.getenv("SEARCH_ENGINE_LOG_FILE")
+
+    level = getattr(logging, log_level_name, logging.INFO)
+    handlers: list[logging.Handler] = [logging.StreamHandler()]
+
+    if log_file:
+        try:
+            handlers.append(logging.FileHandler(log_file, encoding="utf-8"))
+        except OSError as exc:
+            logging.basicConfig(level=level, format=LOG_FORMAT, handlers=handlers, force=True)
+            logger.warning("Could not enable log file '%s': %s", log_file, exc)
+            return
+
+    logging.basicConfig(level=level, format=LOG_FORMAT, handlers=handlers, force=True)
 
 
 # Interactive CLI for building/loading/inspecting/searching index data.
@@ -13,7 +36,7 @@ class SearchCLI:
 
     # Start the interactive command loop.
     def run(self) -> None:
-        print("Quotes Search Engine CLI")
+        print("\n Quotes Search Engine CLI")
         print("Commands: build, load, print [word], find <query>, help, exit")
 
         while True:
@@ -26,12 +49,21 @@ class SearchCLI:
             if not raw_input:
                 continue
 
-            should_exit = self.process_command(raw_input)
+            try:
+                should_exit = self.process_command(raw_input)
+            except Exception as exc:  # pragma: no cover - defensive fallback
+                logger.exception("Unexpected command processing failure: %s", exc)
+                print("An unexpected error occurred while processing the command.")
+                should_exit = False
             if should_exit:
                 break
 
     # Process a single command. Returns True when CLI should exit.
     def process_command(self, command_line: str) -> bool:
+        if not isinstance(command_line, str):
+            print("Invalid command input. Please enter text commands only.")
+            return False
+
         command, _, arguments = command_line.partition(" ")
         command = command.lower().strip()
         arguments = arguments.strip()
@@ -41,12 +73,13 @@ class SearchCLI:
             return True
 
         if command == "help":
-            print("Available commands:")
+            print("\nAvailable commands:")
             print("- build            Crawl site, build index, save to data/compiled_index.json")
             print("- load             Load index from data/compiled_index.json")
             print("- print [word]     Print indexed words or posting list for one word")
             print("- find <query>     Search pages that contain all query words")
             print("- exit             Exit the CLI")
+            print("- help             Show this command list\n")
             return False
 
         if command == "build":
@@ -69,21 +102,27 @@ class SearchCLI:
         return False
 
     def _build_index(self) -> None:
-        print("Starting crawl...")
+        print("\n[Build] Starting crawl...")
         pages = crawler.crawl(START_URL)
-        print(f"Crawl complete: {len(pages)} page(s) collected.")
+        print(f"[Build] Crawl complete: {len(pages)} page(s) collected.")
+        if not pages:
+            print("[Build] No pages were collected. Index not updated.")
+            return
 
-        print("Building inverted index...")
+        print("[Build] Building inverted index...")
         built_index = indexer.build_index(pages)
-        print(f"Index built: {len(built_index)} unique word(s).")
+        print(f"[Build] Index built: {len(built_index)} unique word(s).")
+        if not built_index:
+            print("[Build] Index is empty. Nothing to save.")
+            return
 
         target_path = indexer.DEFAULT_INDEX_PATH
-        print(f"Saving index to {target_path}...")
+        print(f"[Build] Saving index to {target_path}...")
         if indexer.save_index(built_index, target_path):
             self.index = built_index
-            print("Build complete.")
+            print("[Build] Completed.\n")
         else:
-            print("Failed to save index.")
+            print("[Build] Failed to save index.\n")
 
     def _load_index(self) -> None:
         index_path = Path(indexer.DEFAULT_INDEX_PATH)
@@ -107,7 +146,7 @@ class SearchCLI:
             return
 
         self.index = loaded_index
-        print(f"Index loaded successfully ({len(self.index)} indexed word(s)).")
+        print(f"Index loaded successfully ({len(self.index)} indexed word(s)).\n")
 
     def _print_index(self, argument: str) -> None:
         if not self.index:
@@ -116,9 +155,10 @@ class SearchCLI:
 
         if not argument:
             words = search.indexed_words(self.index)
-            print(f"Indexed words ({len(words)}):")
-            for word in words:
-                print(word)
+            print(f"\nIndexed words ({len(words)}):")
+            for index_num, word in enumerate(words, start=1):
+                print(f"{index_num:>3}. {word}")
+            print()
             return
 
         entry = indexer.get_word_entry(argument, self.index)
@@ -126,11 +166,13 @@ class SearchCLI:
             print(f"No indexed entry found for '{argument}'.")
             return
 
-        print(f"Word '{argument}' appears in {len(entry)} page(s):")
-        for url, payload in sorted(entry.items()):
+        print(f"\nWord '{argument}' appears in {len(entry)} page(s):")
+        for index_num, (url, payload) in enumerate(sorted(entry.items()), start=1):
             frequency = payload.get("frequency", 0)
             positions = payload.get("positions", [])
-            print(f"- {url} (frequency={frequency}, positions={positions})")
+            print(f"{index_num:>3}. {url}")
+            print(f"     frequency={frequency}, positions={positions}")
+        print()
 
     def _find(self, query: str) -> None:
         if not self.index:
@@ -146,13 +188,15 @@ class SearchCLI:
             print("No matching pages found.")
             return
 
-        print(f"Found {len(matches)} matching page(s):")
-        for url in matches:
-            print(f"- {url}")
+        print(f"\nFound {len(matches)} matching page(s):")
+        for index_num, url in enumerate(matches, start=1):
+            print(f"{index_num:>3}. {url}")
+        print()
 
 
 # Entrypoint for the interactive CLI.
 def run_cli() -> None:
+    configure_logging()
     SearchCLI().run()
 
 
