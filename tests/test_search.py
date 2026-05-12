@@ -46,6 +46,7 @@ def test_search_handles_empty_invalid_and_missing_queries():
     }
 
     assert search.search("", index_data) == []
+    assert search.search(123, index_data) == []
     assert search.search("!!!", index_data) == []
     assert search.search("missing", index_data) == []
     assert search.search("good", "not-a-dict") == []
@@ -54,3 +55,8 @@ def test_search_handles_empty_invalid_and_missing_queries():
 # indexed_words should return sorted index terms.
 def test_indexed_words_returns_sorted_terms():
     assert search.indexed_words({"zulu": {}, "alpha": {}}) == ["alpha", "zulu"]
+
+
+# indexed_words should return empty list for malformed input.
+def test_indexed_words_handles_invalid_input():
+    assert search.indexed_words("not-a-dict") == []
