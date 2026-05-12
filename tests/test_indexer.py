@@ -107,3 +107,13 @@ def test_get_word_entry_case_insensitive_lookup():
     entry = indexer.get_word_entry("GOOD", index_data)
     assert entry == index_data["good"]                                                                                       
     assert indexer.get_word_entry("missing", index_data) == {}
+
+
+# get_word_entry should return empty result for multi-word lookups.
+def test_get_word_entry_rejects_multi_token_input():
+    index_data = {
+        "good": {
+            "https://quotes.toscrape.com/page/1/": {"frequency": 1, "positions": [0]}
+        }
+    }
+    assert indexer.get_word_entry("good books", index_data) == {}

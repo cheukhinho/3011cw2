@@ -119,12 +119,17 @@ def _is_valid_index_structure(index_data: Any) -> bool:
             frequency = payload.get("frequency")
             positions = payload.get("positions")
 
-            if not isinstance(frequency, int) or frequency < 0:
+            if not isinstance(frequency, int) or frequency <= 0:
                 return False
 
-            if not isinstance(positions, list) or not all(
-                isinstance(pos, int) and pos >= 0 for pos in positions
+            if (
+                not isinstance(positions, list)
+                or not positions
+                or not all(isinstance(pos, int) and pos >= 0 for pos in positions)
             ):
+                return False
+            
+            if len(positions) != frequency:
                 return False
 
     return True
@@ -165,6 +170,10 @@ def get_word_entry(word: str, index: InvertedIndex) -> WordEntry:
     if not tokens:
         return {}
 
+    if len(tokens) != 1:
+        logger.warning("Expected a single word for lookup; recieved %d tokens", len(tokens))
+        return {}
+    
     normalized_word = tokens[0]
     return index.get(normalized_word, {})
 
