@@ -107,7 +107,7 @@ def test_cli_invalid_command_message(capsys):
 
 
 # CLI print command should show structured posting output.
-def test_cli_print_word_output_format(capsys):
+def test_cli_print_command_displays_structured_posting_list(capsys):
     cli = SearchCLI()
     cli.index = {
         "wisdom": {

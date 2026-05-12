@@ -5,7 +5,7 @@ from typing import Any
 from src import indexer
 
 logger = logging.getLogger(__name__)
-PHRASE_PATTERN = re.compile(r'"([^"]+)"')
+_PHRASE_PATTERN = re.compile(r'"([^"]+)"')
 
 
 # Normalize a query string into lowercase tokens.
@@ -27,10 +27,10 @@ def _parse_query_components(query: str) -> tuple[list[str], list[list[str]]]:
         logger.warning("Malformed query received (unmatched quote): %s", query)
         return [], []
 
-    phrase_tokens = [indexer.tokenize(match) for match in PHRASE_PATTERN.findall(query)]
+    phrase_tokens = [indexer.tokenize(match) for match in _PHRASE_PATTERN.findall(query)]
     phrase_tokens = [tokens for tokens in phrase_tokens if tokens]
 
-    query_without_phrases = PHRASE_PATTERN.sub(" ", query)
+    query_without_phrases = _PHRASE_PATTERN.sub(" ", query)
     normal_terms = indexer.tokenize(query_without_phrases)
     return normal_terms, phrase_tokens
 
