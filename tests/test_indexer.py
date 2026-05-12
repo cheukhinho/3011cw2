@@ -43,7 +43,7 @@ def test_build_index_skips_empty_and_malformed_pages():
 
 
 # build_index should only index the first occurrence of a duplicated URL.
-def test_build_index_skips_duplicate_urls_to_avoid_duplicate_indexing():
+def test_build_index_skips_duplicate_urls():
     pages = [
         {"url": "https://quotes.toscrape.com/page/1/", "text": "alpha beta"},
         {"url": "https://quotes.toscrape.com/page/1/", "text": "alpha alpha alpha"},
