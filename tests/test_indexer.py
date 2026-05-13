@@ -42,6 +42,17 @@ def test_build_index_skips_empty_and_malformed_pages():
     assert built == {}
 
 
+# build_index should return empty index for malformed root input.
+def test_build_index_rejects_non_list_input():
+    assert indexer.build_index("not-a-list") == {}
+
+
+# build_index should skip pages whose text has no indexable content.
+def test_build_index_skips_whitespace_only_documents():
+    pages = [{"url": "https://quotes.toscrape.com/page/3/", "text": "   \n\t   ", "links": []}]
+    assert indexer.build_index(pages) == {}
+
+
 # build_index should only index the first occurrence of a duplicated URL.
 def test_build_index_skips_duplicate_urls():
     pages = [
