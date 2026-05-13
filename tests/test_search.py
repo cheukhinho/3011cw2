@@ -39,7 +39,7 @@ def test_search_multi_word_uses_and_semantics():
 
 
 # search should support quoted phrase queries.
-def test_search_phrase_query_matches_consecutive_positions():=
+def test_search_phrase_query_matches_consecutive_positions():
     index_data = {
         "good": {
             "https://quotes.toscrape.com/page/1/": {"frequency": 1, "positions": [0]},
