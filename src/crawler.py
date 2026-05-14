@@ -16,8 +16,8 @@ DEFAULT_TIMEOUT = 10
 DEFAULT_DELAY_SECONDS = 6.0
 
 
+# Return True if candidate_netloc is inside the allowed domain.
 def _is_same_domain(candidate_netloc: str, allowed_netloc: str) -> bool:
-    """Return True if `candidate_netloc` is inside the allowed domain."""
     candidate = candidate_netloc.lower()
     allowed = allowed_netloc.lower()
     return candidate == allowed or candidate.endswith(f".{allowed}")
@@ -175,7 +175,7 @@ def extract_text(html: str) -> str:
     return cleaned
 
 
-# Crawl reachable internal pages from `start_url` using BFS.
+# Crawl reachable internal pages from start_url using BFS.
 # Returns a list of dictionaries.
 def crawl(
     start_url: str,
